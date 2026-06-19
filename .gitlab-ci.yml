@@ -1,0 +1,26 @@
+# Build e push para o GitLab Container Registry (projeto privado).
+# Pré-requisitos: Registry ativado no projeto; runner com executor docker ou kubernetes + dind.
+# No Coolify use: registry.gitlab.com/<grupo>/<projeto>/evolution-api:<tag>
+
+stages:
+  - build
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+  # Sobrescreva em CI/CD Variables se quiser outra tag fixa
+  EVOLUTION_IMAGE_TAG: "2.3.7-buttons"
+
+build-evolution:
+  stage: build
+  image: docker:27-cli
+  services:
+    - docker:27-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE:$EVOLUTION_IMAGE_TAG" -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" .
+    - docker push "$CI_REGISTRY_IMAGE:$EVOLUTION_IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
